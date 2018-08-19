@@ -12,7 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 futures-preview = "0.3.0-alpha.3"
-rayon = { path = "../rayon" }
+rayon = { git = "https://github.com/msiglreith/rayon.git", branch = "futures" }
 
 [[example]]
 name = "simple"
