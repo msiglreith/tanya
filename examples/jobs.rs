@@ -1,11 +1,11 @@
 #![feature(async_await, await_macro, pin, nll, futures_api)]
 
 #[macro_use]
-extern crate tanya;
+extern crate tanya_jobs;
 extern crate futures;
 
 use std::time::Instant;
-use tanya::prelude::*;
+use tanya_jobs::prelude::*;
 
 fn main() {
     let mut world = World::new();
@@ -17,10 +17,15 @@ fn main() {
     job_system.scope(|mut jobs| {
         let mut i = 0;
 
-        loop {
-            let start = Instant::now();
+        let mut start = Instant::now();
+        let mut update = FrameBuilder::new(&mut jobs).dispatch();
 
-            let update = {
+        loop {
+            jobs.block_on(update);
+            println!("{:?}", start.elapsed());
+            start = Instant::now();
+
+            update = {
                 let mut frame = FrameBuilder::new(&mut jobs);
                 {
                     let game_world = frame.access(&mut world);
@@ -59,9 +64,6 @@ fn main() {
 
                 frame.dispatch()
             };
-
-            jobs.block_on(update);
-            println!("{:?}", start.elapsed());
 
             i += 1;
         }

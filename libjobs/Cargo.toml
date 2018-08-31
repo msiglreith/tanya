@@ -1,21 +1,15 @@
 cargo-features = ["edition"]
 
 [package]
-name = "tanya"
+name = "tanya-jobs"
 version = "0.1.0"
 authors = ["msiglreith <m.siglreith@gmail.com>"]
 edition = '2018'
 
-[workspace]
-members = [
-    "libjobs",
-]
+[lib]
+name = "tanya_jobs"
+path = "src/lib.rs"
 
 [dependencies]
 futures-preview = "0.3.0-alpha.3"
-tanya-jobs = { path = "libjobs" }
 rayon = { git = "https://github.com/msiglreith/rayon.git", branch = "futures" }
-
-[[example]]
-name = "jobs"
-path = "examples/jobs.rs"
