@@ -3,7 +3,7 @@ use core::ops::{Deref, DerefMut};
 use futures::future::Future;
 use futures::task::{self, Poll, Waker};
 use std::marker::Unpin;
-use std::mem::PinMut;
+use std::pin::PinMut;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;

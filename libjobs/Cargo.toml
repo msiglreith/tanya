@@ -11,5 +11,5 @@ name = "tanya_jobs"
 path = "src/lib.rs"
 
 [dependencies]
-futures-preview = "0.3.0-alpha.3"
+futures-preview = { git = "https://github.com/rust-lang-nursery/futures-rs.git", rev = "cb03388" }
 rayon = { git = "https://github.com/msiglreith/rayon.git", branch = "futures" }

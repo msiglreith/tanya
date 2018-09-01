@@ -1,13 +1,19 @@
 use crate::notify;
 use std::future::Future;
+use std::sync::{Arc, Mutex};
+
+pub struct PoolInner(pub rayon::ThreadPool);
+pub type Pool = Arc<Mutex<PoolInner>>;
 
 pub struct JobSystem {
-    pub(crate) pool: rayon::ThreadPool,
+    pool: Pool,
 }
 
 impl JobSystem {
     pub fn new(pool: rayon::ThreadPool) -> Self {
-        JobSystem { pool }
+        JobSystem {
+            pool: Arc::new(Mutex::new(PoolInner(pool))),
+        }
     }
 
     pub fn scope<OP, R>(&mut self, op: OP) -> R
@@ -15,20 +21,23 @@ impl JobSystem {
         OP: FnOnce(Scope) -> R + Send,
         R: Send,
     {
-        let registry = unsafe { self.pool.registry() };
-        let tasks = Scope { system: self };
+        let registry = unsafe { self.pool.lock().unwrap().0.registry() };
+        let tasks = Scope {
+            pool: self.pool.clone(),
+        };
 
         registry.in_worker(|_, _| op(tasks))
     }
 }
 
-pub struct Scope<'a> {
-    pub(crate) system: &'a mut JobSystem,
+#[derive(Clone)]
+pub struct Scope {
+    pub pool: Pool,
 }
 
-impl<'a> Scope<'a> {
+impl Scope {
     pub fn block_on<F: Future>(&self, f: F) -> F::Output {
-        self.system.pool.block_on(f)
+        self.pool.lock().unwrap().0.block_on(f)
     }
 }
 

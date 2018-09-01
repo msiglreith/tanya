@@ -12,7 +12,7 @@ members = [
 ]
 
 [dependencies]
-futures-preview = "0.3.0-alpha.3"
+futures-preview = { git = "https://github.com/rust-lang-nursery/futures-rs.git", rev = "cb03388" }
 tanya-jobs = { path = "libjobs" }
 rayon = { git = "https://github.com/msiglreith/rayon.git", branch = "futures" }
 

@@ -1,4 +1,4 @@
-use crate::jobs::{Job, Scope};
+use crate::jobs::{self, Job, Scope};
 use crate::resource::{self, Resource, ResourceTy};
 use crate::world::{World};
 use crate::notify;
@@ -69,21 +69,21 @@ struct State {
     jobs: Vec<Job>,
 }
 
-pub struct FrameBuilder<'a: 'b, 'b> {
+pub struct FrameBuilder {
     state: RefCell<State>,
-    scope: &'b mut Scope<'a>,
+    pool: jobs::Pool,
     access_history: HashMap<ResourceId, AccessPattern>,
 }
 
-impl<'a, 'b> FrameBuilder<'a, 'b> {
-    pub fn new(scope: &'b mut Scope<'a>) -> Self {
+impl FrameBuilder {
+    pub fn new(scope: &Scope) -> Self {
         FrameBuilder {
             state: RefCell::new(State {
                 worlds: Vec::new(),
                 access: AccessMap::new(),
                 jobs: Vec::new(),
             }),
-            scope,
+            pool: scope.pool.clone(),
             access_history: HashMap::new(),
         }
     }
@@ -164,7 +164,10 @@ impl<'a, 'b> FrameBuilder<'a, 'b> {
         let signal = async {
             sender.notify();
         };
-        SpawnExt::spawn(&mut self.scope.system.pool, wait.then(|_| f.then(move |_| signal))).unwrap();
+        {
+            let mut pool = self.pool.lock().unwrap();
+            SpawnExt::spawn(&mut pool.0, wait.then(|_| f.then(move |_| signal))).unwrap();
+        }
 
         recv
     }
