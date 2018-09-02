@@ -2,22 +2,20 @@
 
 #[macro_use]
 extern crate tanya_jobs;
-extern crate futures;
 
 use std::time::Instant;
 use tanya_jobs::prelude::*;
 
-fn submit_frame<'a>(mut jobs: tanya_jobs::jobs::Scope, update: std::future::FutureObj<'static, ()>, i: u32, mut world: World, start: std::time::Instant) {
-    let mut new_jobs = jobs.clone();
-
-    futures::prelude::SpawnExt::spawn(&mut jobs.pool.clone().lock().unwrap().0, async move {
-        await!(update);
+fn submit_game_update<'a>(mut jobs: tanya_jobs::jobs::Scope, prev_update: std::future::FutureObj<'static, ()>, i: u32, mut world: World, start: std::time::Instant) {
+    let new_jobs = jobs.clone();
+    jobs.spawn(async move {
+        await!(prev_update);
 
         println!("{:?}", start.elapsed());
         let start = Instant::now();
 
         let new_update = {
-            let mut frame = FrameBuilder::new(&mut new_jobs);
+            let mut frame = FrameBuilder::new(&new_jobs);
             {
                 let game_world = frame.access(&mut world);
 
@@ -33,7 +31,6 @@ fn submit_frame<'a>(mut jobs: tanya_jobs::jobs::Scope, update: std::future::Futu
                 });
 
                 let r = spawn_job!(frame, |ref elem| {
-                    // let r = await!(y);
                     println!("post y: {:?}", elem[0]);
                 });
 
@@ -56,7 +53,7 @@ fn submit_frame<'a>(mut jobs: tanya_jobs::jobs::Scope, update: std::future::Futu
             frame.dispatch()
         };
 
-        submit_frame(new_jobs, new_update, i+1, world, start);
+        submit_game_update(new_jobs, new_update, i+1, world, start);
     }).unwrap()
 }
 
@@ -65,18 +62,16 @@ fn main() {
     world.add_resource::<Vec<u32>>(vec![0, 2, 3, 5]);
     world.add_resource::<u32>(4);
 
-    let mut job_system = JobSystem::new(rayon::ThreadPoolBuilder::new().build().unwrap());
+    let mut job_system = JobSystem::new(ThreadPoolBuilder::new().build().unwrap());
 
     job_system.scope(|mut jobs| {
-        let mut i = 0;
+        let i = 0;
 
         let start = Instant::now();
         let update = FrameBuilder::new(&mut jobs).dispatch();
 
-        let mut new_jobs = jobs.clone();
-
-        submit_frame(new_jobs, update, i, world, start);
-
-        loop { }
+        submit_game_update(jobs, update, i, world, start);
     });
+
+    loop { }
 }

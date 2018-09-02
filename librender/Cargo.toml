@@ -1,0 +1,14 @@
+cargo-features = ["edition"]
+
+[package]
+name = "tanya-render"
+version = "0.1.0"
+authors = ["msiglreith <m.siglreith@gmail.com>"]
+edition = '2018'
+
+[lib]
+name = "tanya_render"
+path = "src/lib.rs"
+
+[dependencies]
+d3d12-rs = { git = "https://github.com/gfx-rs/d3d12-rs.git" }

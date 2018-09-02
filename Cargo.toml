@@ -9,13 +9,19 @@ edition = '2018'
 [workspace]
 members = [
     "libjobs",
+    "librender",
 ]
 
-[dependencies]
-futures-preview = { git = "https://github.com/rust-lang-nursery/futures-rs.git", rev = "cb03388" }
+[dev-dependencies]
+failure = "0.1.2"
 tanya-jobs = { path = "libjobs" }
-rayon = { git = "https://github.com/msiglreith/rayon.git", branch = "futures" }
+tanya-render = { path = "librender" }
+winit = "0.17"
 
 [[example]]
 name = "jobs"
 path = "examples/jobs.rs"
+
+[[example]]
+name = "hati"
+path = "examples/hati.rs"

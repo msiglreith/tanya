@@ -7,6 +7,8 @@
     pin
 )]
 
+pub extern crate futures;
+
 pub mod frame;
 pub mod jobs;
 pub mod notify;

@@ -1,6 +1,11 @@
 use crate::notify;
+use futures::future::FutureObj;
+use futures::task::SpawnObjError;
 use std::future::Future;
 use std::sync::{Arc, Mutex};
+use std::task::Spawn;
+
+pub use rayon::ThreadPoolBuilder;
 
 pub struct PoolInner(pub rayon::ThreadPool);
 pub type Pool = Arc<Mutex<PoolInner>>;
@@ -35,9 +40,9 @@ pub struct Scope {
     pub pool: Pool,
 }
 
-impl Scope {
-    pub fn block_on<F: Future>(&self, f: F) -> F::Output {
-        self.pool.lock().unwrap().0.block_on(f)
+impl Spawn for Scope {
+    fn spawn_obj(&mut self, future: FutureObj<'static, ()>) -> Result<(), SpawnObjError> {
+        self.pool.lock().unwrap().0.spawn_obj(future)
     }
 }
 
