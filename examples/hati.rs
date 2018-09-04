@@ -19,9 +19,10 @@ fn select_adapter(factory: dxgi::Factory4) -> dxgi::Adapter1 {
     }
 }
 
+const BUFFER_COUNT: u32 = 2;
+
 fn main() -> Result<(), Error> {
     let (width, height) = (1440, 720);
-    let buffer_count = 2;
 
     let mut events_loop = winit::EventsLoop::new();
     let window = winit::WindowBuilder::new()
@@ -61,7 +62,7 @@ fn main() -> Result<(), Error> {
                 quality: 0,
             },
             buffer_usage: dxgitype::DXGI_USAGE_RENDER_TARGET_OUTPUT,
-            buffer_count,
+            buffer_count: BUFFER_COUNT as _,
             scaling: dxgi::Scaling::Stretch,
             swap_effect: dxgi::SwapEffect::FlipDiscard,
             alpha_mode: dxgi::AlphaMode::Ignore,
@@ -81,11 +82,13 @@ fn main() -> Result<(), Error> {
     };
 
     let (backbuffer_rtv_heap, _) = device.create_descriptor_heap(
-        buffer_count,
+        BUFFER_COUNT,
         d3d12::descriptor::HeapType::Rtv,
         d3d12::descriptor::HeapFlags::empty(),
         0,
     );
+
+    let mut fence_values = [0; BUFFER_COUNT as _];
 
     let backbuffers = {
         let initial = backbuffer_rtv_heap.start_cpu_descriptor();
@@ -96,7 +99,7 @@ fn main() -> Result<(), Error> {
         );
         let handle_size = device.get_descriptor_increment_size(d3d12::descriptor::HeapType::Rtv);
 
-        (0..buffer_count)
+        (0..BUFFER_COUNT)
             .map(|i| {
                 let rtv = d3d12::CpuDescriptor {
                     ptr: initial.ptr + (i * handle_size) as usize,
@@ -116,6 +119,9 @@ fn main() -> Result<(), Error> {
         0,
     );
     cmd_list.close();
+
+    let (frame_fence, _) = device.create_fence(0);
+    let frame_event = d3d12::sync::Event::create(false, false);
 
     let mut quit = false;
     loop {
@@ -146,6 +152,16 @@ fn main() -> Result<(), Error> {
         }
 
         swapchain.as0().present(0, 0);
+
+        let cur_fence_value = fence_values[frame as usize];
+        queue.signal(frame_fence, cur_fence_value);
+
+        if frame_fence.get_value() < cur_fence_value {
+            frame_fence.set_event_on_completion(frame_event, cur_fence_value);
+            frame_event.wait(1_000_000);
+        }
+
+        fence_values[frame as usize] += 1;
     }
 
     /*
