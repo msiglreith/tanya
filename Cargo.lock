@@ -138,15 +138,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "d3d12-rs"
-version = "0.1.0"
-source = "git+https://github.com/gfx-rs/d3d12-rs.git#4097a10997192dec0906f15c1d2b92542724ec89"
-dependencies = [
- "bitflags 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "dlib"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -576,7 +567,7 @@ dependencies = [
 name = "tanya-render"
 version = "0.1.0"
 dependencies = [
- "d3d12-rs 0.1.0 (git+https://github.com/gfx-rs/d3d12-rs.git)",
+ "d3d12 0.1.0 (git+https://github.com/msiglreith/d3d12-rs.git)",
 ]
 
 [[package]]
@@ -733,7 +724,6 @@ dependencies = [
 "checksum crossbeam-epoch 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "927121f5407de9956180ff5e936fe3cf4324279280001cd56b669d28ee7e9150"
 "checksum crossbeam-utils 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2760899e32a1d58d5abb31129f8fae5de75220bc2176e77ff7c627ae45c918d9"
 "checksum d3d12 0.1.0 (git+https://github.com/msiglreith/d3d12-rs.git)" = "<none>"
-"checksum d3d12-rs 0.1.0 (git+https://github.com/gfx-rs/d3d12-rs.git)" = "<none>"
 "checksum dlib 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "77e51249a9d823a4cb79e3eca6dcd756153e8ed0157b6c04775d04bf1b13b76a"
 "checksum downcast-rs 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "18df8ce4470c189d18aa926022da57544f31e154631eb4cfe796aea97051fe6c"
 "checksum either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3be565ca5c557d7f59e7cfcf1844f9e3033650c929c6566f511e8005f205c1d0"

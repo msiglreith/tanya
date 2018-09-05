@@ -11,4 +11,4 @@ name = "tanya_render"
 path = "src/lib.rs"
 
 [dependencies]
-d3d12-rs = { git = "https://github.com/gfx-rs/d3d12-rs.git" }
+d3d12 = { git = "https://github.com/msiglreith/d3d12-rs.git" }

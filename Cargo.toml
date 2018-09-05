@@ -6,16 +6,22 @@ version = "0.1.0"
 authors = ["msiglreith <m.siglreith@gmail.com>"]
 edition = '2018'
 
+[lib]
+name = "tanya"
+path = "src/lib.rs"
+
 [workspace]
 members = [
     "libjobs",
     "librender",
 ]
 
-[dev-dependencies]
-failure = "0.1.2"
+[dependencies]
 tanya-jobs = { path = "libjobs" }
 tanya-render = { path = "librender" }
+
+[dev-dependencies]
+failure = "0.1.2"
 winit = "0.17"
 d3d12 = { git = "https://github.com/msiglreith/d3d12-rs.git" }
 winapi = "0.3"

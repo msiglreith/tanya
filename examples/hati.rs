@@ -1,5 +1,6 @@
 use d3d12::dxgi;
 use failure::Error;
+use tanya::render;
 use winapi::shared::{dxgiformat, dxgitype, winerror};
 use winit::os::windows::WindowExt;
 use winit::{dpi::LogicalSize, WindowEvent};
@@ -32,16 +33,9 @@ fn main() -> Result<(), Error> {
         }).with_title("tanya - hati sample")
         .build(&events_loop)?;
 
-    // Enable debug
-    let (debug, _) = d3d12::Debug::get_debug_interface();
-    debug.enable_debug_layer();
-    unsafe {
-        debug.destroy();
-    }
+    let mut engine = render::Engine::new(true);
 
-    let (factory, _) = dxgi::Factory4::create(dxgi::FactoryCreationFlags::DEBUG);
-
-    let adapter = select_adapter(factory);
+    let adapter = select_adapter(engine.factory);
     let (device, _) = d3d12::Device::create(adapter, d3d12::FeatureLevel::L12_0);
 
     let (queue, _) = device.create_command_queue(
@@ -69,10 +63,11 @@ fn main() -> Result<(), Error> {
             flags: 0,
         };
 
-        let (swapchain, _) =
-            factory
-                .as2()
-                .create_swapchain_for_hwnd(queue, window.get_hwnd() as *mut _, &desc);
+        let (swapchain, _) = engine.factory.as2().create_swapchain_for_hwnd(
+            queue,
+            window.get_hwnd() as *mut _,
+            &desc,
+        );
         let (swapchain3, _): d3d12::D3DResult<dxgi::SwapChain3> = unsafe { swapchain.cast() };
         unsafe {
             swapchain.destroy();
@@ -173,7 +168,6 @@ fn main() -> Result<(), Error> {
         swapchain.destroy();
         device.destroy();
         adapter.destroy();
-        factory.destroy();
     }
     */
 
