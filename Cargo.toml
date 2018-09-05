@@ -19,12 +19,12 @@ members = [
 [dependencies]
 tanya-jobs = { path = "libjobs" }
 tanya-render = { path = "librender" }
+winapi = "0.3"
 
 [dev-dependencies]
 failure = "0.1.2"
 winit = "0.17"
 d3d12 = { git = "https://github.com/msiglreith/d3d12-rs.git" }
-winapi = "0.3"
 
 [[example]]
 name = "jobs"

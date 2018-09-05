@@ -12,3 +12,5 @@ path = "src/lib.rs"
 
 [dependencies]
 d3d12 = { git = "https://github.com/msiglreith/d3d12-rs.git" }
+winapi = "0.3"
+winit = "0.17"
