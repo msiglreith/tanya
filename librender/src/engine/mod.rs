@@ -45,15 +45,12 @@ impl Engine {
             }
             id += 1;
 
-            // Check for D3D12 support
-            {
-                let (device, hr) = d3d12::Device::create(adapter, d3d12::FeatureLevel::L12_0);
-                if !winerror::SUCCEEDED(hr) {
-                    continue;
-                }
-                unsafe { adapter.destroy() };
-                return device;
-            };
+            let (device, hr) = d3d12::Device::create(adapter, d3d12::FeatureLevel::L12_0);
+            if !winerror::SUCCEEDED(hr) {
+                continue;
+            }
+            unsafe { adapter.destroy() };
+            return device;
         }
     }
 

@@ -1,7 +1,5 @@
-use d3d12::dxgi;
 use failure::Error;
 use tanya::render;
-use winapi::shared::{dxgiformat, dxgitype, winerror};
 use winit::{dpi::LogicalSize, WindowEvent};
 
 const BUFFER_COUNT: u32 = 2;
@@ -17,7 +15,7 @@ fn main() -> Result<(), Error> {
         }).with_title("tanya - hati sample")
         .build(&events_loop)?;
 
-    let mut engine = render::Engine::new(true);
+    let engine = render::Engine::new(true);
     let swap_chain = engine.create_swapchain(&window, BUFFER_COUNT);
 
     let mut fence_values = [0; BUFFER_COUNT as _];
@@ -51,7 +49,7 @@ fn main() -> Result<(), Error> {
         }
 
         let frame = swap_chain.begin_frame();
-        let (present_target, present_rtv) = swap_chain.get_present_target(frame);
+        let (_present_target, present_rtv) = swap_chain.get_present_target(frame);
 
         cmd_allocator.reset();
         cmd_list.reset(cmd_allocator, d3d12::PipelineState::null());
@@ -78,15 +76,6 @@ fn main() -> Result<(), Error> {
 
         fence_values[frame as usize] += 1;
     }
-
-    /*
-    unsafe {
-        for buffer in backbuffers {
-            buffer.destroy();
-        }
-        swapchain.destroy();
-    }
-    */
 
     Ok(())
 }

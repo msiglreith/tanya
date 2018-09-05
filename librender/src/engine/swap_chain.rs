@@ -34,6 +34,18 @@ impl SwapChain {
     }
 }
 
+impl Drop for SwapChain {
+    fn drop(&mut self) {
+        unsafe {
+            for resource in self.resources.drain(..) {
+                resource.destroy();
+            }
+            self.rtv_heap.destroy();
+            self.swap_chain.destroy();
+        }
+    }
+}
+
 impl Engine {
     pub fn create_swapchain(&self, window: &Window, buffer_count: u32) -> SwapChain {
         let swap_chain = {
