@@ -56,8 +56,8 @@ impl Engine {
 
     fn init_debug() {
         // Enable debug
-        let (debug, _) = d3d12::Debug::get_debug_interface();
-        debug.enable_debug_layer();
+        let (debug, _) = d3d12::Debug::get_interface();
+        debug.enable_layer();
         unsafe {
             debug.destroy();
         }

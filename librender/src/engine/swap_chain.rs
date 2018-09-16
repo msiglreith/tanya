@@ -67,7 +67,7 @@ impl Engine {
                 flags: 0,
             };
 
-            let (swapchain, _) = self.factory.as2().create_swapchain_for_hwnd(
+            let (swapchain, _) = self.factory.as_factory2().create_swapchain_for_hwnd(
                 self.queue,
                 window.get_hwnd() as *mut _,
                 &desc,
@@ -104,7 +104,7 @@ impl Engine {
                     let rtv = d3d12::CpuDescriptor {
                         ptr: initial.ptr + (i * rtv_size) as usize,
                     };
-                    let (resource, _) = swap_chain.as0().get_buffer(i);
+                    let (resource, _) = swap_chain.as_swapchain0().get_buffer(i);
                     self.device.create_render_target_view(resource, &desc, rtv);
                     resource
                 }).collect::<Vec<_>>()

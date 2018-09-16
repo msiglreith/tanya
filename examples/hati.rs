@@ -58,11 +58,7 @@ fn main() -> Result<(), Error> {
 
         cmd_list.close();
 
-        unsafe {
-            engine
-                .queue
-                .ExecuteCommandLists(1, &mut cmd_list.as_mut_ptr() as *mut *mut _ as *mut *mut _);
-        }
+        engine.queue.execute_command_lists(&[cmd_list.as_list()]);
 
         swap_chain.end_frame();
 
