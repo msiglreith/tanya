@@ -1,0 +1,3 @@
+[submodule "libash-vma/vma"]
+	path = libash-vma/vma
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

@@ -1,0 +1,11 @@
+[package]
+name = "ash-vma"
+version = "0.1.0"
+authors = ["msiglreith <m.siglreith@gmail.com>"]
+edition = '2018'
+
+[lib]
+name = "ash_vma"
+path = "src/lib.rs"
+
+[dependencies]
