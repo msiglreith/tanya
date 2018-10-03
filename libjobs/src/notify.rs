@@ -1,9 +1,9 @@
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
 use futures::future::Future;
-use futures::task::{self, Poll, Waker};
+use futures::task::{self, LocalWaker, Poll, Waker};
 use std::marker::Unpin;
-use std::pin::PinMut;
+use std::pin::Pin;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
@@ -131,11 +131,11 @@ impl Inner {
         }
     }
 
-    fn recv(&self, cx: &mut task::Context, id: usize) -> Poll<()> {
+    fn recv(&self, lw: &LocalWaker, id: usize) -> Poll<()> {
         let done = if self.complete.load(SeqCst) {
             true
         } else {
-            let task = cx.waker().clone();
+            let task = lw.clone().into_waker();
             match self.rx_tasks.try_lock() {
                 Some(mut slot) => {
                     slot[id] = Some(task);
@@ -176,9 +176,9 @@ impl Drop for Sender {
 impl Future for Receiver {
     type Output = ();
 
-    fn poll(self: PinMut<Self>, cx: &mut task::Context) -> Poll<()> {
+    fn poll(self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<()> {
         match self.id {
-            Some(id) => self.inner.recv(cx, id),
+            Some(id) => self.inner.recv(lw, id),
             None => Poll::Ready(()),
         }
     }

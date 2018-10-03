@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::future::Future;
 use std::collections::hash_map::Entry::{Vacant, Occupied};
-use futures::prelude::SpawnExt;
+use futures::task::SpawnExt;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Access {

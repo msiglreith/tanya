@@ -9,5 +9,5 @@ name = "tanya_jobs"
 path = "src/lib.rs"
 
 [dependencies]
-futures-preview = "0.3.0-alpha.6"
+futures-preview = "0.3.0-alpha.7"
 rayon = { git = "https://github.com/msiglreith/rayon.git", branch = "futures" }

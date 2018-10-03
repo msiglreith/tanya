@@ -5,8 +5,9 @@ extern crate tanya_jobs;
 
 use std::time::Instant;
 use tanya_jobs::prelude::*;
+use tanya_jobs::futures::task::SpawnExt;
 
-fn submit_game_update<'a>(mut jobs: tanya_jobs::jobs::Scope, prev_update: std::future::FutureObj<'static, ()>, i: u32, mut world: World, start: std::time::Instant) {
+fn submit_game_update<'a>(mut jobs: tanya_jobs::jobs::Scope, prev_update: futures::future::FutureObj<'static, ()>, i: u32, mut world: World, start: std::time::Instant) {
     let new_jobs = jobs.clone();
     jobs.spawn(async move {
         await!(prev_update);
