@@ -1,5 +1,3 @@
-cargo-features = ["edition"]
-
 [package]
 name = "tanya-jobs"
 version = "0.1.0"
@@ -11,5 +9,5 @@ name = "tanya_jobs"
 path = "src/lib.rs"
 
 [dependencies]
-futures-preview = { git = "https://github.com/rust-lang-nursery/futures-rs.git", rev = "cb03388" }
+futures-preview = "0.3.0-alpha.6"
 rayon = { git = "https://github.com/msiglreith/rayon.git", branch = "futures" }

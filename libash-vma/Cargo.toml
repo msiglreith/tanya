@@ -3,9 +3,14 @@ name = "ash-vma"
 version = "0.1.0"
 authors = ["msiglreith <m.siglreith@gmail.com>"]
 edition = '2018'
+build = "build.rs"
 
 [lib]
 name = "ash_vma"
 path = "src/lib.rs"
 
 [dependencies]
+ash = { git = "https://github.com/msiglreith/ash.git", branch = "vma_ready" }
+
+[build-dependencies]
+cc = "1"
