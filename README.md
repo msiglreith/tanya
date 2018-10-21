@@ -1,12 +1,14 @@
-# Tanya
+# Tanya (nightly)
 
-### nightly-only library
+Everything here is early and barely useful or finished.
 
-A job based multithreaded execution library tailored towards game development.
+## Features
+### `libjobs`
+A job based multithreaded execution library.
 
-The job system allows async execution (`futures`) of small tasks on top of the `rayon`s threadpool.
+The job system allows async execution (`futures`) of small tasks on top of `rayon`s threadpool.
 On the top-level we split a main loop iteration into smaller `Frame`s. Each frame consists of a bunch of smaller async jobs.
-With this split we can achieve dependencies across multiple timesteps:
+With this split we can achieve dependencies across multiple timesteps (pipelining!):
 *
 ```
 loop {
@@ -37,9 +39,11 @@ loop {
         frame.dispatch()
     };
 }
+```
 
-## TODO
-- [ ] API design iterations
-- [ ] Complexer example
-- [ ] Profiler integration
-- [ ] Frame-Frame dependencies
+### `libecs`
+
+Entity component system inspired by Unity's ECS approach. Entities are stored in groups depending on their components, trading off memory vs cache locality.
+
+### `libash-vma`
+Vulkan Memory ALlocator wrapper on top of `ash`. Will be used with the upcoming `ash` based renderer.
