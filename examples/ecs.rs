@@ -9,5 +9,6 @@ struct Baz;
 
 fn main() {
     let mut entities = tanya::ecs::Entities::new();
-    let e0 = entities.create_entity::<(Foo, Bar)>((&[Foo], &[Bar]));
+    let mut e0 = [tanya::ecs::Entity::INVALID];
+    entities.create_entities::<(Foo, Bar)>(&mut e0, (&[Foo], &[Bar]));
 }
