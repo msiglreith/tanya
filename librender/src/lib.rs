@@ -1,8 +1,6 @@
-extern crate d3d12;
-extern crate winapi;
+#![feature(const_slice_as_ptr)]
 
+pub mod display;
 pub mod engine;
-pub mod scene;
 
-pub use self::engine::swap_chain::SwapChain;
-pub use self::engine::Engine;
+pub use self::engine::{device::Device, swapchain::Swapchain, Engine};
