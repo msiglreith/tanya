@@ -4,7 +4,6 @@ extern crate indextree;
 extern crate random_color;
 
 use indextree::Arena;
-use indextree::NodeId;
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -34,13 +33,14 @@ pub struct Rect {
 
 pub struct Instance {
     widget: Box<Widget>,
-    layout: LayoutNode,
-    geometry: Rect,
+    pub layout: LayoutNode,
+    pub geometry: Rect,
 }
 
 pub type LayoutNode = Rc<RefCell<yoga::Node>>;
 
 type InstanceTree = Arena<WidgetId>;
+pub type NodeId = indextree::NodeId;
 
 pub struct IdGenerator {
     next_id: usize,
@@ -60,12 +60,12 @@ impl IdGenerator {
 
 pub struct Ui {
     states: HashMap<Key, Box<Any>>,
-    tree: InstanceTree,
-    instances: HashMap<WidgetId, Instance>,
-    instance_lut: HashMap<WidgetId, NodeId>,
+    pub tree: InstanceTree,
+    pub instances: HashMap<WidgetId, Instance>,
+    pub instance_lut: HashMap<WidgetId, NodeId>,
     id_gen: IdGenerator,
     key_gen: IdGenerator,
-    root: WidgetId,
+    pub root: WidgetId,
 }
 
 impl Ui {
@@ -426,8 +426,8 @@ impl Widget for Row {
 
 // TODO: move into example
 pub struct App {
-    button0: Key,
-    button1: Key,
+    pub button0: Key,
+    pub button1: Key,
 }
 
 impl Widget for App {

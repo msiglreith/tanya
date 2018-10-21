@@ -2,7 +2,10 @@ extern crate glutin;
 extern crate grr;
 extern crate tanya_ui as ui;
 
+use self::ui::{NodeId, Ui};
 use glutin::GlContext;
+
+mod render;
 
 fn main() {
     let mut events_loop = glutin::EventsLoop::new();
