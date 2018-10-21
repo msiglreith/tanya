@@ -1,0 +1,22 @@
+[package]
+name = "tanya-ui"
+version = "0.1.0"
+authors = ["msiglreith <m.siglreith@gmail.com>"]
+edition = '2018'
+
+[lib]
+name = "tanya_ui"
+path = "src/lib.rs"
+
+[dependencies]
+indextree = "3"
+yoga = "0.3"
+random_color = "0.4"
+
+[dev-dependencies]
+glutin = "0.18"
+grr = { git = "https://github.com/msiglreith/grr.git" }
+
+[[example]]
+name = "basic"
+path = "examples/basic.rs"

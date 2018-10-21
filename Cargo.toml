@@ -13,22 +13,21 @@ members = [
     "libash-vma",
     "libjobs",
     "librender",
-    "librender2",
     "libecs",
     "libecs_derive",
+    "libui",
 ]
 
 [dependencies]
 tanya-jobs = { path = "libjobs" }
 tanya-render = { path = "librender" }
-tanya-render2 = { path = "librender2" }
 tanya-ecs = { path = "libecs" }
 tanya-ecs-derive = { path = "libecs_derive" }
+tanya-ui = { path = "libui" }
 
 [dev-dependencies]
 failure = "0.1.2"
 winit = "0.17"
-d3d12 = { git = "https://github.com/msiglreith/d3d12-rs.git" }
 
 [[example]]
 name = "jobs"
@@ -42,5 +41,3 @@ path = "examples/ecs.rs"
 name = "hati"
 path = "examples/hati.rs"
 
-# [patch.'https://github.com/msiglreith/d3d12-rs.git']
-# d3d12 = { path = "../repository/d3d12-rs" }
