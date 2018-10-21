@@ -9,6 +9,14 @@ name = "tanya_render"
 path = "src/lib.rs"
 
 [dependencies]
-d3d12 = { git = "https://github.com/msiglreith/d3d12-rs.git" }
-winapi = "0.3"
+ash = { git = "https://github.com/MaikKlein/ash.git", rev = "c62172b" }
+lazy_static = "1.1"
 winit = "0.17"
+winapi = "0.3"
+
+[dev-dependencies]
+failure = "0.1.2"
+
+[[example]]
+name = "triangle"
+path = "examples/triangle.rs"
