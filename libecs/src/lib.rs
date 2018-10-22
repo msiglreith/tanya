@@ -39,16 +39,30 @@ impl Entities {
         entities: &mut [Entity],
         stream: G::BuildStream,
     ) {
-        assert_eq!(entities.len(), 1);
-        // TODO:
         let group_id = self.define_group::<G>();
-        let chunk_index = self.groups.alloc_slots(group_id, 1).start;
-        let chunk_id = chunk_index as usize / CHUNK_SIZE;
-        let chunk_base = chunk_index as usize % CHUNK_SIZE;
-        let chunk = self.groups.get_component_chunks(group_id, chunk_id);
-        G::build_entities(chunk, &stream, chunk_base, 0, 1);
 
-        entities[0] = self.entities.create_entity(group_id, chunk_index);
+        let chunk_indices = self.groups.alloc_slots(group_id, entities.len());
+        let chunk_id_start = chunk_indices.start as usize / CHUNK_SIZE;
+        let chunk_id_end = (chunk_indices.end as usize + CHUNK_SIZE - 1) / CHUNK_SIZE;
+
+        let mut chunk_base = chunk_indices.start as usize;
+        let mut cur_entity = 0;
+
+        for chunk_id in chunk_id_start..chunk_id_end {
+            let id_end = (chunk_indices.end as usize).min((chunk_id_start + 1) * CHUNK_SIZE);
+            let start = chunk_base % CHUNK_SIZE;
+            let num = id_end - chunk_base;
+
+            let chunk = self.groups.get_component_chunks(group_id, chunk_id);
+            G::build_entities(chunk, &stream, start, cur_entity, num as _);
+
+            for e in cur_entity..cur_entity + num {
+                entities[0] = self.entities.create_entity(group_id, chunk_id as _);
+            }
+
+            cur_entity += num;
+            chunk_base += num;
+        }
     }
 
     pub fn query<Q: query::Query>(&mut self) {}
