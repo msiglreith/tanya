@@ -5,6 +5,7 @@ mod free_list;
 
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::mem;
 use std::ops::Range;
 
@@ -79,7 +80,9 @@ impl<C> Storage for ComponentStorage<C> {
 
 pub trait IComponentGroup<'a>: 'static {
     type BuildStream<'a>;
+    type Iterator<'a>;
 
+    fn iter(comp_map: &HashMap<TypeId, ComponentId>, group: &'a GroupStorage) -> Self::Iterator;
     fn define_components(comp_map: &HashMap<TypeId, ComponentId>) -> Vec<ComponentId>;
     fn fill_slots(
         comp_map: &HashMap<TypeId, ComponentId>,
@@ -92,7 +95,7 @@ pub trait IComponentGroup<'a>: 'static {
 }
 
 #[derive(Debug)]
-struct GroupStorage {
+pub struct GroupStorage {
     comp_chunks: HashMap<ComponentId, Vec<ChunkPtr>>,
     num_chunks: u32,
     num_slots: u32,
@@ -196,6 +199,15 @@ impl World {
                 };
             }
 
+            G::fill_slots(
+                &self.comp_map,
+                &mut self.group_storages.get_mut(&group_id).unwrap().comp_chunks,
+                base_chunk_slot as _,
+                &stream,
+                cur_entity as _,
+                num_slots as _,
+            );
+
             cur_entity += num_slots;
             base_chunk_slot += num_slots as u32;
         }
@@ -227,6 +239,47 @@ impl World {
         group.num_slots += num;
         slots
     }
+
+    pub fn query_group<'a, G: IComponentGroup<'a>>(&'a self) -> G::Iterator {
+        let group_ty = TypeId::of::<G>();
+        let group_id = self.group_map[&group_ty];
+        G::iter(&self.comp_map, self.group_storages.get(&group_id).unwrap())
+    }
+}
+
+pub struct GroupIterator2<'a, A, B> {
+    chunks_a: &'a [ChunkPtr],
+    chunks_b: &'a [ChunkPtr],
+    cur: usize,
+    end: usize,
+    _marker: PhantomData<(A, B)>,
+}
+
+impl<'a, A, B> Iterator for GroupIterator2<'a, A, B>
+where
+    A: Component,
+    B: Component,
+{
+    type Item = (&'a A, &'a B);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.cur >= self.end {
+            return None;
+        }
+
+        let chunk = self.cur / CHUNK_SIZE;
+        let chunk_slot = self.cur % CHUNK_SIZE;
+        let chunk_a = unsafe {
+            ::std::slice::from_raw_parts(self.chunks_a[chunk].ptr as *const A, CHUNK_SIZE)
+        };
+        let chunk_b = unsafe {
+            ::std::slice::from_raw_parts(self.chunks_b[chunk].ptr as *const B, CHUNK_SIZE)
+        };
+        let item = (&chunk_a[chunk_slot], &chunk_b[chunk_slot]);
+        self.cur += 1;
+
+        Some(item)
+    }
 }
 
 impl<'a, A, B> IComponentGroup<'a> for (A, B)
@@ -235,6 +288,26 @@ where
     B: Component,
 {
     type BuildStream = (&'a [A], &'a [B]);
+    type Iterator = GroupIterator2<'a, A, B>;
+
+    fn iter(comp_map: &HashMap<TypeId, ComponentId>, group: &'a GroupStorage) -> Self::Iterator {
+        let ty_a = TypeId::of::<A>();
+        let ty_b = TypeId::of::<B>();
+
+        let comp_id_a = comp_map[&ty_a];
+        let comp_id_b = comp_map[&ty_b];
+
+        let chunks_a = group.comp_chunks.get(&comp_id_a).unwrap();
+        let chunks_b = group.comp_chunks.get(&comp_id_b).unwrap();
+
+        GroupIterator2 {
+            chunks_a: &chunks_a,
+            chunks_b: &chunks_b,
+            cur: 0,
+            end: group.num_slots as _,
+            _marker: PhantomData,
+        }
+    }
 
     fn define_components(comp_map: &HashMap<TypeId, ComponentId>) -> Vec<ComponentId> {
         let ty_a = TypeId::of::<A>();
@@ -259,8 +332,8 @@ where
 
         let slot_last = slot_base + num;
 
-        let start_chunk = slot_base % CHUNK_SIZE;
-        let end_chunk = (slot_base + CHUNK_SIZE - 1) % CHUNK_SIZE;
+        let start_chunk = slot_base / CHUNK_SIZE;
+        let end_chunk = (slot_last + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
         let mut start_slot = slot_base;
         for chunk_id in start_chunk..end_chunk {
@@ -295,13 +368,13 @@ where
 mod tests {
     use super::*;
 
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Debug)]
     struct Foo {
         a: usize,
     }
     impl Component for Foo {}
 
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Debug)]
     struct Bar {}
     impl Component for Bar {}
 
@@ -318,5 +391,9 @@ mod tests {
         println!("{:?}", entities);
         println!("{:?}", world.entities);
         println!("{:?}", world.group_storages);
+
+        for (a, b) in world.query_group::<(Foo, Bar)>() {
+            println!("{:?}", (a, b));
+        }
     }
 }
