@@ -981,6 +981,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tanya-ecs2"
+version = "0.1.0"
+
+[[package]]
 name = "tanya-jobs"
 version = "0.1.0"
 dependencies = [
