@@ -23,8 +23,11 @@ pub type EntityId = u32;
 pub type Generation = u32;
 pub type GroupId = usize;
 pub type ComponentId = usize;
+pub type ChunkId = usize;
+pub type SlotId = usize;
 
 const GENERATION_INVALID: Generation = Generation::max_value();
+const ENTITY_COMP_ID: ComponentId = 0;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Entity {
@@ -43,7 +46,12 @@ impl Entity {
 struct EntityData {
     generation: Generation,
     group: GroupId,
-    slot: u32,
+    chunk: ChunkId,
+    slot: SlotId,
+}
+
+struct EntityComponent {
+    id: EntityId,
 }
 
 pub trait Component: Clone + Sized + 'static {}
@@ -87,7 +95,8 @@ pub trait IComponentGroup<'a>: 'static {
     fn fill_slots(
         comp_map: &HashMap<TypeId, ComponentId>,
         comp_chunks: &mut HashMap<ComponentId, Vec<ChunkPtr>>,
-        slot_base: usize,
+        chunk: ChunkId,
+        slot_base: SlotId,
         stream: &Self::BuildStream,
         stream_base: usize,
         num: usize,
@@ -95,15 +104,23 @@ pub trait IComponentGroup<'a>: 'static {
 }
 
 #[derive(Debug)]
+struct ChunkData {
+    pub len: usize,
+}
+
+#[derive(Debug)]
 pub struct GroupStorage {
     comp_chunks: HashMap<ComponentId, Vec<ChunkPtr>>,
-    num_chunks: u32,
-    num_slots: u32,
+    chunk_data: Vec<ChunkData>,
+    free_chunks: Vec<usize>,
 }
 
 impl GroupStorage {
+    pub fn num_chunks(&self) -> usize {
+        self.chunk_data.len()
+    }
     pub fn capacity(&self) -> u32 {
-        self.num_chunks * CHUNK_SIZE as u32
+        (self.num_chunks() * CHUNK_SIZE) as u32
     }
 }
 
@@ -118,14 +135,23 @@ pub struct World {
 
 impl World {
     pub fn new() -> Self {
-        World {
+        let mut world = World {
             entities: Vec::new(),
             entities_free: FreeList::new(),
             group_storages: HashMap::new(),
             group_map: HashMap::new(),
             comp_storages: HashMap::new(),
             comp_map: HashMap::new(),
-        }
+        };
+
+        let entity_type_id = TypeId::of::<EntityComponent>();
+        let id = ENTITY_COMP_ID;
+        world
+            .comp_storages
+            .insert(id, Box::new(ComponentStorage::<EntityComponent>::new()));
+        world.comp_map.insert(entity_type_id, id);
+
+        world
     }
 
     pub fn define_component<C: Component>(&mut self) -> ComponentId {
@@ -145,8 +171,8 @@ impl World {
             let components = G::define_components(&self.comp_map);
             let mut storage = GroupStorage {
                 comp_chunks: HashMap::new(),
-                num_chunks: 0,
-                num_slots: 0,
+                chunk_data: Vec::new(),
+                free_chunks: Vec::new(),
             };
             for comp in components {
                 storage.comp_chunks.insert(comp, Vec::new());
@@ -163,12 +189,9 @@ impl World {
     ) {
         let group_id = self.define_group::<G>();
         let mut num_entities = entities.len();
-        let chunk_slots = self.alloc_group_slots::<G>(group_id, num_entities as _);
-
         let mut cur_entity = 0;
-        let mut base_chunk_slot = chunk_slots.start;
         while num_entities > 0 {
-            let slots = if let Some(slots) = self.entities_free.allocate(num_entities as _) {
+            let entity_slots = if let Some(slots) = self.entities_free.allocate(num_entities as _) {
                 let num_allocated = slots.end - slots.start;
                 assert_ne!(num_allocated, 0);
 
@@ -181,35 +204,60 @@ impl World {
                     EntityData {
                         generation: 0,
                         group: 0,
+                        chunk: 0,
                         slot: 0,
                     },
                 );
                 continue;
             };
+            let num_slots = entity_slots.end - entity_slots.start;
+            let (chunk, chunk_slots) = self.alloc_group_slots::<G>(group_id, num_slots as _);
 
-            let num_slots = slots.end - slots.start;
-            for slot in 0..num_slots {
-                let entity = cur_entity + slot;
-                let entity_data = &mut self.entities[(slots.start + slot) as usize];
-                entity_data.group = group_id;
-                entity_data.slot = base_chunk_slot + slot as u32;
-                entities[entity as usize] = Entity {
-                    id: (slots.start + slot) as _,
-                    generation: entity_data.generation,
+            {
+                let entity_comp = unsafe {
+                    ::std::slice::from_raw_parts_mut(
+                        self.group_storages
+                            .get_mut(&group_id)
+                            .unwrap()
+                            .comp_chunks
+                            .get_mut(&ENTITY_COMP_ID)
+                            .unwrap()[chunk]
+                            .ptr as *mut EntityComponent,
+                        CHUNK_SIZE,
+                    )
                 };
+
+                for slot in 0..num_slots {
+                    let entity = cur_entity + slot;
+
+                    let entity_data = &mut self.entities[(entity_slots.start + slot) as usize];
+                    let entity_id = (entity_slots.start + slot) as EntityId;
+                    let slot_id = chunk_slots.start + slot as usize;
+
+                    entity_comp[slot_id] = EntityComponent { id: entity_id };
+                    entity_data.group = group_id;
+                    entity_data.chunk = chunk;
+                    entity_data.slot = slot_id;
+                    entities[entity as usize] = Entity {
+                        id: entity_id,
+                        generation: entity_data.generation,
+                    };
+                }
             }
+
+            // TODO: fill entity component chunks
 
             G::fill_slots(
                 &self.comp_map,
                 &mut self.group_storages.get_mut(&group_id).unwrap().comp_chunks,
-                base_chunk_slot as _,
+                chunk,
+                chunk_slots.start as _,
                 &stream,
                 cur_entity as _,
                 num_slots as _,
             );
 
             cur_entity += num_slots;
-            base_chunk_slot += num_slots as u32;
         }
     }
 
@@ -217,27 +265,51 @@ impl World {
         &mut self,
         group_id: GroupId,
         num: u32,
-    ) -> Range<u32> {
+    ) -> (ChunkId, Range<SlotId>) {
         let group = self.group_storages.get_mut(&group_id).unwrap();
-        let slots = group.num_slots..group.num_slots + num;
-        let capacity = group.capacity();
-        let required_slots = group.num_slots + num;
-        if capacity < required_slots {
-            let required_chunks = (required_slots + CHUNK_SIZE as u32 - 1) / CHUNK_SIZE as u32;
-            let components = G::define_components(&self.comp_map);
-            for component in components {
-                let comp_storage = self.comp_storages.get_mut(&component).unwrap();
-                comp_storage.resize(required_chunks as _);
-                comp_storage.alloc_chunks(
-                    group.comp_chunks.get_mut(&component).unwrap(),
-                    group.num_chunks as usize..required_chunks as usize,
-                );
-            }
-            group.num_chunks = required_chunks;
-        }
+        match group.free_chunks.pop() {
+            Some(chunk) => {
+                let start_slot = group.chunk_data[chunk].len;
+                let num_free = CHUNK_SIZE - start_slot;
+                let num_alloc = num_free.min(num as _);
+                group.chunk_data[chunk].len += num_alloc;
+                if num_alloc < num_free {
+                    group.free_chunks.push(chunk);
+                }
 
-        group.num_slots += num;
-        slots
+                (chunk, start_slot..start_slot + num_alloc)
+            }
+            None => {
+                let required_chunks = (num + CHUNK_SIZE as u32 - 1) / CHUNK_SIZE as u32;
+                let cur_chunks = group.num_chunks();
+                let components = G::define_components(&self.comp_map);
+                for component in components {
+                    let comp_storage = self.comp_storages.get_mut(&component).unwrap();
+                    comp_storage.resize(required_chunks as _);
+                    let num_chunks = group.num_chunks();
+                    comp_storage.alloc_chunks(
+                        group.comp_chunks.get_mut(&component).unwrap(),
+                        num_chunks as usize..required_chunks as usize,
+                    );
+                }
+
+                for chunk in cur_chunks..cur_chunks + required_chunks as usize {
+                    group.chunk_data.push(ChunkData { len: 0 });
+                }
+
+                let num_allocated = num.min(CHUNK_SIZE as _);
+                if num < CHUNK_SIZE as u32 {
+                    group.free_chunks.push(cur_chunks);
+                }
+                group.chunk_data[cur_chunks].len = num_allocated as _;
+
+                for chunk in ((cur_chunks + 1)..(cur_chunks + required_chunks as usize)).rev() {
+                    group.free_chunks.push(chunk);
+                }
+
+                (cur_chunks, 0..num_allocated as usize)
+            }
+        }
     }
 
     pub fn query_group<'a, G: IComponentGroup<'a>>(&'a self) -> G::Iterator {
@@ -250,8 +322,9 @@ impl World {
 pub struct GroupIterator2<'a, A, B> {
     chunks_a: &'a [ChunkPtr],
     chunks_b: &'a [ChunkPtr],
-    cur: usize,
-    end: usize,
+    chunk_data: &'a [ChunkData],
+    cur_chunk: usize,
+    cur_slot: usize,
     _marker: PhantomData<(A, B)>,
 }
 
@@ -263,20 +336,24 @@ where
     type Item = (&'a A, &'a B);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cur >= self.end {
+        debug_assert!(self.cur_chunk < self.chunk_data.len());
+        if self.cur_slot >= self.chunk_data[self.cur_chunk].len {
+            self.cur_slot = 0;
+            self.cur_chunk += 1;
+        }
+
+        if self.cur_chunk >= self.chunks_a.len() {
             return None;
         }
 
-        let chunk = self.cur / CHUNK_SIZE;
-        let chunk_slot = self.cur % CHUNK_SIZE;
         let chunk_a = unsafe {
-            ::std::slice::from_raw_parts(self.chunks_a[chunk].ptr as *const A, CHUNK_SIZE)
+            ::std::slice::from_raw_parts(self.chunks_a[self.cur_chunk].ptr as *const A, CHUNK_SIZE)
         };
         let chunk_b = unsafe {
-            ::std::slice::from_raw_parts(self.chunks_b[chunk].ptr as *const B, CHUNK_SIZE)
+            ::std::slice::from_raw_parts(self.chunks_b[self.cur_chunk].ptr as *const B, CHUNK_SIZE)
         };
-        let item = (&chunk_a[chunk_slot], &chunk_b[chunk_slot]);
-        self.cur += 1;
+        let item = (&chunk_a[self.cur_slot], &chunk_b[self.cur_slot]);
+        self.cur_slot += 1;
 
         Some(item)
     }
@@ -303,8 +380,9 @@ where
         GroupIterator2 {
             chunks_a: &chunks_a,
             chunks_b: &chunks_b,
-            cur: 0,
-            end: group.num_slots as _,
+            chunk_data: &group.chunk_data,
+            cur_chunk: 0,
+            cur_slot: 0,
             _marker: PhantomData,
         }
     }
@@ -313,13 +391,14 @@ where
         let ty_a = TypeId::of::<A>();
         let ty_b = TypeId::of::<B>();
 
-        vec![comp_map[&ty_a], comp_map[&ty_b]]
+        vec![ENTITY_COMP_ID, comp_map[&ty_a], comp_map[&ty_b]]
     }
 
     fn fill_slots(
         comp_map: &HashMap<TypeId, ComponentId>,
         comp_chunks: &mut HashMap<ComponentId, Vec<ChunkPtr>>,
-        slot_base: usize,
+        chunk_id: ChunkId,
+        slot_base: SlotId,
         stream: &Self::BuildStream,
         stream_base: usize,
         num: usize,
@@ -330,36 +409,28 @@ where
         let comp_id_a = comp_map[&ty_a];
         let comp_id_b = comp_map[&ty_b];
 
-        let slot_last = slot_base + num;
+        let start_slot = slot_base;
+        let end_slot = start_slot + num;
 
-        let start_chunk = slot_base / CHUNK_SIZE;
-        let end_chunk = (slot_last + CHUNK_SIZE - 1) / CHUNK_SIZE;
+        let start_entity = stream_base;
+        let end_entity = start_entity + num;
 
-        let mut start_slot = slot_base;
-        for chunk_id in start_chunk..end_chunk {
-            let end_slot = ((chunk_id + 1) * CHUNK_SIZE).min(slot_last);
-            let start_entity = start_slot - slot_base + stream_base;
-            let end_entity = start_entity + (end_slot - start_slot);
+        {
+            let comp_a = comp_chunks.get_mut(&comp_id_a).unwrap(); // TODO: slow
+            let chunk = unsafe {
+                ::std::slice::from_raw_parts_mut(comp_a[chunk_id].ptr as *mut A, CHUNK_SIZE)
+            };
 
-            {
-                let comp_a = comp_chunks.get_mut(&comp_id_a).unwrap(); // TODO: slow
-                let chunk = unsafe {
-                    ::std::slice::from_raw_parts_mut(comp_a[chunk_id].ptr as *mut A, CHUNK_SIZE)
-                };
+            chunk[start_slot..end_slot].clone_from_slice(&(stream.0)[start_entity..end_entity]);
+        }
 
-                chunk[start_slot..end_slot].clone_from_slice(&(stream.0)[start_entity..end_entity]);
-            }
+        {
+            let comp_b = comp_chunks.get_mut(&comp_id_b).unwrap(); // TODO: slow
+            let chunk = unsafe {
+                ::std::slice::from_raw_parts_mut(comp_b[chunk_id].ptr as *mut B, CHUNK_SIZE)
+            };
 
-            {
-                let comp_b = comp_chunks.get_mut(&comp_id_b).unwrap(); // TODO: slow
-                let chunk = unsafe {
-                    ::std::slice::from_raw_parts_mut(comp_b[chunk_id].ptr as *mut B, CHUNK_SIZE)
-                };
-
-                chunk[start_slot..end_slot].clone_from_slice(&(stream.1)[start_entity..end_entity]);
-            }
-
-            start_slot = end_slot;
+            chunk[start_slot..end_slot].clone_from_slice(&(stream.1)[start_entity..end_entity]);
         }
     }
 }
