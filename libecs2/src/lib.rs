@@ -1,5 +1,6 @@
 #![feature(generic_associated_types)]
 #![feature(vec_resize_with)]
+#![feature(dbg_macro)]
 
 mod free_list;
 
@@ -59,6 +60,7 @@ pub trait Component: Clone + Sized + 'static {}
 trait Storage {
     fn resize(&mut self, num_chunks: usize);
     fn alloc_chunks(&mut self, dst: &mut Vec<ChunkPtr>, chunks: Range<usize>);
+    fn shift(&self, chunk: &ChunkPtr, slots: Range<usize>, amount: usize);
 }
 
 pub struct ComponentStorage<C> {
@@ -82,6 +84,22 @@ impl<C> Storage for ComponentStorage<C> {
             dst.push(ChunkPtr {
                 ptr: self.chunks[chunk].as_mut_ptr() as *mut _,
             })
+        }
+    }
+
+    fn shift(&self, chunk_raw: &ChunkPtr, slots: Range<usize>, amount: usize) {
+        assert!(slots.start >= amount);
+        assert!(slots.end <= CHUNK_SIZE);
+
+        let chunk =
+            unsafe { ::std::slice::from_raw_parts_mut::<C>(chunk_raw.ptr as *mut _, CHUNK_SIZE) };
+
+        unsafe {
+            ::std::ptr::copy(
+                &chunk[slots.start] as *const _,
+                &mut chunk[slots.start - amount] as *mut _,
+                slots.end - slots.start,
+            );
         }
     }
 }
@@ -182,6 +200,63 @@ impl World {
         })
     }
 
+    pub fn free_entities(&mut self, entities: &[Entity]) {
+        for entity in entities {
+            let entity_id = entity.id;
+            self.entities_free.deallocate(entity_id..entity_id + 1);
+            let entity_data = self.entities[entity_id as usize];
+            assert_eq!(entity.generation, entity_data.generation);
+
+            self.entities[entity_id as usize].generation += 1;
+
+            let group_id = entity_data.group;
+            let group = if let Some(group) = self.group_storages.get_mut(&group_id) {
+                group
+            } else {
+                continue;
+            };
+
+            let used_chunk_slots = group.chunk_data[entity_data.chunk].len;
+            debug_assert!(used_chunk_slots > 0);
+            group.chunk_data[entity_data.chunk].len -= 1;
+
+            let src_slot = used_chunk_slots - 1;
+            let reposition = src_slot != entity_data.slot;
+            if reposition {
+                let src_entity_id = {
+                    let entity_comp = &group.comp_chunks[&ENTITY_COMP_ID];
+                    let entity_chunk_raw = &entity_comp[entity_data.chunk];
+                    let entity_chunk = unsafe {
+                        ::std::slice::from_raw_parts(
+                            entity_chunk_raw.ptr as *mut EntityComponent,
+                            CHUNK_SIZE,
+                        )
+                    };
+
+                    dbg!(entity_chunk[src_slot].id)
+                };
+
+                println!("{:#?}", &self.entities);
+                self.entities[src_entity_id as usize].slot = entity_data.slot;
+                for (comp_id, chunks) in &group.comp_chunks {
+                    let chunk = &chunks[entity_data.chunk];
+                    self.comp_storages[&comp_id].shift(
+                        chunk,
+                        src_slot..src_slot + 1,
+                        src_slot - entity_data.slot,
+                    );
+                }
+            }
+
+            if used_chunk_slots == 1 {
+                // free chunk
+                // TODO
+            } else {
+                //
+            }
+        }
+    }
+
     pub fn create_entities<'a, G: IComponentGroup<'a>>(
         &mut self,
         entities: &mut [Entity],
@@ -245,8 +320,6 @@ impl World {
                 }
             }
 
-            // TODO: fill entity component chunks
-
             G::fill_slots(
                 &self.comp_map,
                 &mut self.group_storages.get_mut(&group_id).unwrap().comp_chunks,
@@ -293,7 +366,7 @@ impl World {
                     );
                 }
 
-                for chunk in cur_chunks..cur_chunks + required_chunks as usize {
+                for _ in cur_chunks..cur_chunks + required_chunks as usize {
                     group.chunk_data.push(ChunkData { len: 0 });
                 }
 
@@ -455,13 +528,28 @@ mod tests {
         world.define_component::<Foo>();
         world.define_component::<Bar>();
         let mut entities = [Entity::INVALID; 8];
-        let foo_data = [Foo { a: 4 }; 8];
+        let mut entities2 = [Entity::INVALID; 8];
+        let foo_data = (0..8).map(|a| Foo { a }).collect::<Vec<_>>();
+        let foo_data2 = [Foo { a: 10 }; 8];
         let bar_data = [Bar {}; 8];
         world.create_entities::<(Foo, Bar)>(&mut entities, (&foo_data, &bar_data));
 
-        println!("{:?}", entities);
-        println!("{:?}", world.entities);
-        println!("{:?}", world.group_storages);
+        println!("{:#?}", entities);
+        println!("{:#?}", world.entities);
+
+        for (a, b) in world.query_group::<(Foo, Bar)>() {
+            println!("{:?}", (a, b));
+        }
+
+        world.free_entities(&entities[..4]);
+
+        println!("{:#?}", world.entities);
+
+        world.create_entities::<(Foo, Bar)>(&mut entities2, (&foo_data2, &bar_data));
+
+        println!("{:#?}", entities);
+        println!("{:#?}", entities2);
+        println!("{:#?}", world.entities);
 
         for (a, b) in world.query_group::<(Foo, Bar)>() {
             println!("{:?}", (a, b));

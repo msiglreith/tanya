@@ -1,13 +1,15 @@
 use std::collections::LinkedList;
 use std::ops::Range;
 
+use super::EntityId;
+
 // TODO: mostly from the dx12 free list allocator of gfx-rs
 //       modify it to fit the needs for this use-case better.
 
 #[derive(Debug)]
 pub struct Allocator {
-    size: u64,
-    free_list: LinkedList<Range<u64>>,
+    size: EntityId,
+    free_list: LinkedList<Range<EntityId>>,
 }
 
 impl Allocator {
@@ -18,11 +20,7 @@ impl Allocator {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.free_list.is_empty()
-    }
-
-    pub fn with_capacity(size: u64) -> Self {
+    pub fn with_capacity(size: EntityId) -> Self {
         // Node spanning the whole range.
         let node = Range {
             start: 0,
@@ -33,12 +31,12 @@ impl Allocator {
         Allocator { size, free_list }
     }
 
-    pub fn append(&mut self, num: u64) {
+    pub fn append(&mut self, num: EntityId) {
         self.deallocate(self.size..self.size + num);
         self.size += num;
     }
 
-    pub fn allocate(&mut self, mut size: u64) -> Option<Range<u64>> {
+    pub fn allocate(&mut self, mut size: EntityId) -> Option<Range<EntityId>> {
         // TODO: refactor
 
         if size == 0 {
@@ -80,7 +78,7 @@ impl Allocator {
         })
     }
 
-    pub fn deallocate(&mut self, mut range: Range<u64>) {
+    pub fn deallocate(&mut self, mut range: Range<EntityId>) {
         // early out for invalid or empty ranges
         if range.end <= range.start {
             return;
