@@ -1,5 +1,5 @@
-use super::Engine;
-use ash::version::V1_1;
+use super::{Adapter, Engine};
+use ash::version::{InstanceV1_0, V1_1};
 use ash::vk;
 use std::ptr;
 
@@ -11,8 +11,13 @@ pub struct Device {
 }
 
 impl Engine {
-    pub fn create_device(&self) -> Device {
-        /*
+    pub fn create_device(&self, adapter: &Adapter) -> Device {
+        let queue_info = vk::DeviceQueueCreateInfo {};
+
+        let features = vk::PhysicalDeviceFeatures {
+            ..Default::default()
+        };
+
         let create_info = vk::DeviceCreateInfo {
             s_type: vk::StructureType::DEVICE_CREATE_INFO,
             p_next: ptr::null(),
@@ -25,11 +30,14 @@ impl Engine {
             pp_enabled_extension_names: EXTENSION.as_ptr(),
             p_enabled_features: &features,
         };
-        
+
+        let device: ash::Device<V1_1> = self
+            .instance
+            .create_device(adapter.physical_device, &create_info, None)
+            .unwrap();
+
         let swapchain = ash::extensions::Swapchain::new(&self.instance, &device).unwrap();
-        
+
         Device { swapchain }
-        */
-        unimplemented!()
     }
 }

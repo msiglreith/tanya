@@ -1,5 +1,4 @@
-use ash::version::EntryV1_0;
-use ash::version::V1_1;
+use ash::version::{EntryV1_0, InstanceV1_0, V1_1};
 use ash::vk;
 
 use std::ffi::CString;
@@ -14,6 +13,13 @@ const EXTENSION: &[*const i8] = &[
     b"VK_KHR_surface\0".as_ptr() as *const _,
     b"VK_KHR_win32_surface\0".as_ptr() as *const _,
 ];
+
+pub struct Adapter {
+    physical_device: vk::PhysicalDevice,
+    queue_families: Vec<vk::QueueFamilyProperties>,
+    properties: vk::PhysicalDeviceProperties,
+    features: vk::PhysicalDeviceFeatures,
+}
 
 pub struct Engine {
     entry: ash::Entry<V1_1>,
@@ -62,5 +68,23 @@ impl Engine {
             instance,
             surface_win32,
         }
+    }
+
+    pub fn enumerate_adapters(&self) -> Vec<Adapter> {
+        self.instance
+            .enumerate_physical_devices()
+            .unwrap()
+            .iter()
+            .map(|physical_device| {
+                let queue_families = self
+                    .instance
+                    .get_physical_device_queue_family_properties(*physical_device);
+
+                Adapter {
+                    physical_device,
+                    queue_families,
+                }
+            })
+            .collect()
     }
 }

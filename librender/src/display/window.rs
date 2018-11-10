@@ -1,4 +1,4 @@
-use super::Display;
+use super::{Display, Surface};
 use ash::vk;
 use crate::Engine;
 use std::ptr;
@@ -33,7 +33,7 @@ impl WindowDisplay {
 }
 
 impl Display for WindowDisplay {
-    fn surface(&self) -> vk::SurfaceKHR {
-        self.surface
+    fn surface(&self) -> Surface {
+        Surface { raw: &self.surface }
     }
 }

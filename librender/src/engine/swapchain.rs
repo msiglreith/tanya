@@ -9,12 +9,12 @@ pub struct Swapchain {}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Config {
-    min_image_count: usize,
-    width: u32,
-    height: u32,
-    color_space: vk::ColorSpaceKHR,
-    present_mode: vk::PresentModeKHR,
-    format: vk::Format,
+    pub min_image_count: usize,
+    pub width: u32,
+    pub height: u32,
+    pub color_space: vk::ColorSpaceKHR,
+    pub present_mode: vk::PresentModeKHR,
+    pub format: vk::Format,
 }
 
 impl Engine {
@@ -32,7 +32,7 @@ impl Engine {
             s_type: vk::StructureType::SWAPCHAIN_CREATE_INFO_KHR,
             p_next: ptr::null(),
             flags: vk::SwapchainCreateFlagsKHR::empty(),
-            surface: display.surface(),
+            surface: display.surface().raw(),
             min_image_count: config.min_image_count as _,
             image_color_space: config.color_space,
             image_format: config.format,
