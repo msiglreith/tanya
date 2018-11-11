@@ -14,6 +14,7 @@ const EXTENSION: &[*const i8] = &[
     b"VK_KHR_win32_surface\0".as_ptr() as *const _,
 ];
 
+#[derive(Debug)]
 pub struct Adapter {
     physical_device: vk::PhysicalDevice,
     queue_families: Vec<vk::QueueFamilyProperties>,
@@ -74,15 +75,21 @@ impl Engine {
         self.instance
             .enumerate_physical_devices()
             .unwrap()
-            .iter()
+            .into_iter()
             .map(|physical_device| {
                 let queue_families = self
                     .instance
-                    .get_physical_device_queue_family_properties(*physical_device);
+                    .get_physical_device_queue_family_properties(physical_device);
+                let features = self.instance.get_physical_device_features(physical_device);
+                let properties = self
+                    .instance
+                    .get_physical_device_properties(physical_device);
 
                 Adapter {
                     physical_device,
                     queue_families,
+                    features,
+                    properties,
                 }
             })
             .collect()

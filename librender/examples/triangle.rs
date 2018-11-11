@@ -19,7 +19,10 @@ fn main() -> Result<(), Error> {
         .build(&events_loop)?;
 
     let engine = render::Engine::new();
-    let device = engine.create_device();
+    let adapters = engine.enumerate_adapters();
+    println!("{:#?}", adapters);
+
+    let device = engine.create_device(&adapters[0]);
     let display = render::display::WindowDisplay::new(&engine, &window);
     let swapchain_config = render::swapchain::Config {
         min_image_count: 2,
@@ -45,6 +48,8 @@ fn main() -> Result<(), Error> {
             break;
         }
     }
+
+    device.destroy();
 
     Ok(())
 }

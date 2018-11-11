@@ -10,9 +10,25 @@ pub struct Device {
     pub(crate) swapchain: ash::extensions::Swapchain,
 }
 
+impl Device {
+    pub fn destroy(self) {
+        unsafe {
+            self.device.destroy_device(None);
+        }
+    }
+}
+
 impl Engine {
     pub fn create_device(&self, adapter: &Adapter) -> Device {
-        let queue_info = vk::DeviceQueueCreateInfo {};
+        let queue_priority = 1.0f32;
+        let queue_info = vk::DeviceQueueCreateInfo {
+            s_type: vk::StructureType::DEVICE_QUEUE_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: vk::DeviceQueueCreateFlags::empty(),
+            queue_family_index: 0,
+            queue_count: 1,
+            p_queue_priorities: &queue_priority as *const _,
+        };
 
         let features = vk::PhysicalDeviceFeatures {
             ..Default::default()
@@ -31,13 +47,14 @@ impl Engine {
             p_enabled_features: &features,
         };
 
-        let device: ash::Device<V1_1> = self
-            .instance
-            .create_device(adapter.physical_device, &create_info, None)
-            .unwrap();
+        let device: ash::Device<V1_1> = unsafe {
+            self.instance
+                .create_device(adapter.physical_device, &create_info, None)
+                .unwrap()
+        };
 
         let swapchain = ash::extensions::Swapchain::new(&self.instance, &device).unwrap();
 
-        Device { swapchain }
+        Device { device, swapchain }
     }
 }
