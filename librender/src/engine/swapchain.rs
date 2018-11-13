@@ -1,11 +1,33 @@
-use ash::vk;
+use ash::{extensions, vk};
 use crate::{
     display::Display,
     engine::{device::Device, Engine},
 };
 use std::ptr;
 
-pub struct Swapchain {}
+pub type Frame = usize;
+
+pub struct Swapchain {
+    swapchain: vk::SwapchainKHR,
+    swapchain_fn: extensions::Swapchain,
+}
+
+impl Swapchain {
+    pub fn begin_frame(&self, semaphore: vk::Semaphore) -> Frame {
+        let index = unsafe {
+            self.swapchain_fn.acquire_next_image_khr(
+                self.swapchain,
+                !0,
+                semaphore,
+                vk::Fence::null(),
+            )
+        };
+
+        index.map(|i| i as Frame).unwrap()
+    }
+
+    pub fn end_frame(&self, frame: Frame, queue: vk::Queue) {}
+}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Config {
@@ -56,6 +78,11 @@ impl Engine {
                 .unwrap()
         };
 
-        Swapchain {}
+        let swapchain_fn = extensions::Swapchain::new(&self.instance, &device.device).unwrap();
+
+        Swapchain {
+            swapchain,
+            swapchain_fn,
+        }
     }
 }

@@ -16,15 +16,15 @@ const EXTENSION: &[*const i8] = &[
 
 #[derive(Debug)]
 pub struct Adapter {
-    physical_device: vk::PhysicalDevice,
+    pub(crate) physical_device: vk::PhysicalDevice,
     queue_families: Vec<vk::QueueFamilyProperties>,
     properties: vk::PhysicalDeviceProperties,
     features: vk::PhysicalDeviceFeatures,
 }
 
 pub struct Engine {
-    entry: ash::Entry<V1_1>,
-    instance: ash::Instance<V1_1>,
+    pub(crate) entry: ash::Entry<V1_1>,
+    pub(crate) instance: ash::Instance<V1_1>,
     pub(crate) surface_win32: ash::extensions::Win32Surface,
 }
 

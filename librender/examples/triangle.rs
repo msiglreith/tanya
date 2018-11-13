@@ -6,6 +6,8 @@ use self::render::vk;
 use failure::Error;
 use winit::{dpi::LogicalSize, WindowEvent};
 
+const NUM_FRAMES: usize = 2;
+
 fn main() -> Result<(), Error> {
     let (width, height) = (1440, 720);
 
@@ -20,12 +22,25 @@ fn main() -> Result<(), Error> {
 
     let engine = render::Engine::new();
     let adapters = engine.enumerate_adapters();
+    let adapter = &adapters[0];
+    let display = render::display::WindowDisplay::new(&engine, &window);
     println!("{:#?}", adapters);
 
-    let device = engine.create_device(&adapters[0]);
-    let display = render::display::WindowDisplay::new(&engine, &window);
+    let main_queue_family = 0;
+    assert!(
+        display
+            .surface()
+            .adapter_supported(adapter, main_queue_family)
+    );
+    let main_queue_info = render::engine::device::QueueCreateInfo {
+        family: main_queue_family,
+        queues: vec![1.0f32],
+    };
+    let device = engine.create_device(adapter, &[main_queue_info]);
+    let main_queue = device.get_queue(main_queue_family, 0);
+
     let swapchain_config = render::swapchain::Config {
-        min_image_count: 2,
+        min_image_count: NUM_FRAMES as _,
         width,
         height,
         color_space: vk::ColorSpaceKHR::SRGB_NONLINEAR,
@@ -34,7 +49,13 @@ fn main() -> Result<(), Error> {
     };
     let swapchain = engine.create_swapchain(&device, &display, swapchain_config);
 
+    let fences: [vk::Fence; NUM_FRAMES] = [device.create_fence(false), device.create_fence(false)];
+    let frame_ready: [vk::Semaphore; NUM_FRAMES] =
+        [device.create_semaphore(), device.create_semaphore()];
+
     let mut quit = false;
+    let mut tick = 0;
+
     loop {
         events_loop.poll_events(|event| match event {
             winit::Event::WindowEvent {
@@ -44,9 +65,15 @@ fn main() -> Result<(), Error> {
             _ => {}
         });
 
+        let frame = swapchain.begin_frame(frame_ready[tick % NUM_FRAMES]);
+
         if quit {
             break;
         }
+
+        swapchain.end_frame(frame, main_queue);
+
+        tick += 1;
     }
 
     device.destroy();

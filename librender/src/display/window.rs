@@ -1,10 +1,11 @@
 use super::{Display, Surface};
-use ash::vk;
+use ash::{extensions, vk};
 use crate::Engine;
 use std::ptr;
 
 pub struct WindowDisplay {
     surface: vk::SurfaceKHR,
+    surface_fn: extensions::Surface,
 }
 
 impl WindowDisplay {
@@ -27,13 +28,20 @@ impl WindowDisplay {
                 .create_win32_surface_khr(&create_info, None)
                 .unwrap()
         };
+        let surface_fn = extensions::Surface::new(&engine.entry, &engine.instance).unwrap();
 
-        WindowDisplay { surface }
+        WindowDisplay {
+            surface,
+            surface_fn,
+        }
     }
 }
 
 impl Display for WindowDisplay {
     fn surface(&self) -> Surface {
-        Surface { raw: &self.surface }
+        Surface {
+            surface: &self.surface,
+            surface_fn: &self.surface_fn,
+        }
     }
 }
