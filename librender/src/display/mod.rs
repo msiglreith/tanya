@@ -27,7 +27,35 @@ impl<'a> Surface<'a> {
     }
 
     pub fn query_support(&self, adapter: &Adapter) -> SurfaceSupport {
-        unimplemented!()
+        let capabilities = unsafe {
+            self.surface_fn
+                .get_physical_device_surface_capabilities_khr(
+                    adapter.physical_device,
+                    *self.surface,
+                )
+                .unwrap()
+        };
+
+        let present_modes = unsafe {
+            self.surface_fn
+                .get_physical_device_surface_present_modes_khr(
+                    adapter.physical_device,
+                    *self.surface,
+                )
+                .unwrap()
+        };
+
+        let formats = unsafe {
+            self.surface_fn
+                .get_physical_device_surface_formats_khr(adapter.physical_device, *self.surface)
+                .unwrap()
+        };
+
+        SurfaceSupport {
+            capabilities,
+            present_modes,
+            formats,
+        }
     }
 }
 

@@ -32,6 +32,8 @@ fn main() -> Result<(), Error> {
             .surface()
             .adapter_supported(adapter, main_queue_family)
     );
+    let surface_support = display.surface().query_support(adapter);
+
     let main_queue_info = render::engine::device::QueueCreateInfo {
         family: main_queue_family,
         queues: vec![1.0f32],
