@@ -26,7 +26,21 @@ impl Swapchain {
         index.map(|i| i as Frame).unwrap()
     }
 
-    pub fn end_frame(&self, frame: Frame, queue: vk::Queue) {}
+    pub fn end_frame(&self, frame: Frame, queue: vk::Queue, wait_semaphores: &[vk::Semaphore]) {
+        let mut result = vk::Result::SUCCESS;
+        let frame_u32 = frame as u32;
+        let present_info = vk::PresentInfoKHR {
+            s_type: vk::StructureType::PRESENT_INFO_KHR,
+            p_next: ptr::null(),
+            wait_semaphore_count: wait_semaphores.len() as _,
+            p_wait_semaphores: wait_semaphores.as_ptr(),
+            swapchain_count: 1,
+            p_swapchains: &self.swapchain as *const _,
+            p_image_indices: &frame_u32 as *const _,
+            p_results: &mut result as *mut _,
+        };
+        unsafe { self.swapchain_fn.queue_present_khr(queue, &present_info) };
+    }
 }
 
 #[derive(Debug, Copy, Clone)]

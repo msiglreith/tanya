@@ -65,13 +65,14 @@ fn main() -> Result<(), Error> {
             _ => {}
         });
 
-        let frame = swapchain.begin_frame(frame_ready[tick % NUM_FRAMES]);
+        let frame_img_ready = frame_ready[tick % NUM_FRAMES];
+        let frame = swapchain.begin_frame(frame_img_ready);
 
         if quit {
             break;
         }
 
-        swapchain.end_frame(frame, main_queue);
+        swapchain.end_frame(frame, main_queue, &[frame_img_ready]);
 
         tick += 1;
     }
