@@ -10,7 +10,7 @@ name = "ash_vma"
 path = "src/lib.rs"
 
 [dependencies]
-ash = { git = "https://github.com/msiglreith/ash.git", branch = "vma-0.25" }
+ash = "0.26"
 
 [build-dependencies]
 cc = "1"

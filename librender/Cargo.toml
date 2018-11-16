@@ -9,7 +9,7 @@ name = "tanya_render"
 path = "src/lib.rs"
 
 [dependencies]
-ash = "0.25"
+ash = "0.26"
 lazy_static = "1.1"
 winit = "0.17"
 winapi = "0.3"
