@@ -1,4 +1,4 @@
-use ash::version::{EntryV1_0, InstanceV1_0, V1_1};
+use ash::version::{EntryV1_0, InstanceV1_0};
 use ash::vk;
 
 use std::ffi::CString;
@@ -23,14 +23,14 @@ pub struct Adapter {
 }
 
 pub struct Engine {
-    pub(crate) entry: ash::Entry<V1_1>,
-    pub(crate) instance: ash::Instance<V1_1>,
+    pub(crate) entry: ash::Entry,
+    pub(crate) instance: ash::Instance,
     pub(crate) surface_win32: ash::extensions::Win32Surface,
 }
 
 impl Engine {
     pub fn new() -> Self {
-        let entry: ash::Entry<V1_1> = ash::Entry::new().unwrap();
+        let entry: ash::Entry = ash::Entry::new().unwrap();
 
         let app_name = CString::new("tanya").unwrap();
         let engine_name = CString::new("tanya").unwrap();
@@ -50,19 +50,19 @@ impl Engine {
             p_next: ptr::null(),
             flags: vk::InstanceCreateFlags::empty(),
             p_application_info: &app_info,
-            pp_enabled_layer_names: LAYERS.as_ptr(),
+            pp_enabled_layer_names: ptr::null(),
             enabled_layer_count: LAYERS.len() as u32,
             pp_enabled_extension_names: EXTENSION.as_ptr(),
             enabled_extension_count: EXTENSION.len() as u32,
         };
 
-        let instance: ash::Instance<V1_1> = unsafe {
+        let instance: ash::Instance = unsafe {
             entry
                 .create_instance(&create_info, None)
                 .expect("Couldn't create instance")
         };
 
-        let surface_win32 = ash::extensions::Win32Surface::new(&entry, &instance).unwrap();
+        let surface_win32 = ash::extensions::Win32Surface::new(&entry, &instance);
 
         Engine {
             entry,
@@ -72,26 +72,28 @@ impl Engine {
     }
 
     pub fn enumerate_adapters(&self) -> Vec<Adapter> {
-        self.instance
-            .enumerate_physical_devices()
-            .unwrap()
-            .into_iter()
-            .map(|physical_device| {
-                let queue_families = self
-                    .instance
-                    .get_physical_device_queue_family_properties(physical_device);
-                let features = self.instance.get_physical_device_features(physical_device);
-                let properties = self
-                    .instance
-                    .get_physical_device_properties(physical_device);
+        unsafe {
+            self.instance
+                .enumerate_physical_devices()
+                .unwrap()
+                .into_iter()
+                .map(|physical_device| {
+                    let queue_families = self
+                        .instance
+                        .get_physical_device_queue_family_properties(physical_device);
+                    let features = self.instance.get_physical_device_features(physical_device);
+                    let properties = self
+                        .instance
+                        .get_physical_device_properties(physical_device);
 
-                Adapter {
-                    physical_device,
-                    queue_families,
-                    features,
-                    properties,
-                }
-            })
-            .collect()
+                    Adapter {
+                        physical_device,
+                        queue_families,
+                        features,
+                        properties,
+                    }
+                })
+                .collect()
+        }
     }
 }

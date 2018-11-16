@@ -28,7 +28,7 @@ impl WindowDisplay {
                 .create_win32_surface_khr(&create_info, None)
                 .unwrap()
         };
-        let surface_fn = extensions::Surface::new(&engine.entry, &engine.instance).unwrap();
+        let surface_fn = extensions::Surface::new(&engine.entry, &engine.instance);
 
         WindowDisplay {
             surface,

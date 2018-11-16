@@ -27,11 +27,9 @@ fn main() -> Result<(), Error> {
     println!("{:#?}", adapters);
 
     let main_queue_family = 0;
-    assert!(
-        display
-            .surface()
-            .adapter_supported(adapter, main_queue_family)
-    );
+    assert!(display
+        .surface()
+        .adapter_supported(adapter, main_queue_family));
     let surface_support = display.surface().query_support(adapter);
 
     let main_queue_info = render::engine::device::QueueCreateInfo {
@@ -54,6 +52,8 @@ fn main() -> Result<(), Error> {
     let fences: [vk::Fence; NUM_FRAMES] = [device.create_fence(false), device.create_fence(false)];
     let frame_ready: [vk::Semaphore; NUM_FRAMES] =
         [device.create_semaphore(), device.create_semaphore()];
+
+    println!("{:?}", (&fences, &frame_ready));
 
     let mut quit = false;
     let mut tick = 0;

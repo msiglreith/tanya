@@ -1,12 +1,12 @@
 use super::{Adapter, Engine};
-use ash::version::{DeviceV1_0, InstanceV1_0, V1_1};
+use ash::version::{DeviceV1_0, InstanceV1_0};
 use ash::vk;
 use std::ptr;
 
 const EXTENSION: &[*const i8] = &[b"VK_KHR_swapchain\0".as_ptr() as *const _];
 
 pub struct Device {
-    pub(crate) device: ash::Device<V1_1>,
+    pub(crate) device: ash::Device,
     pub(crate) swapchain: ash::extensions::Swapchain,
 }
 
@@ -36,7 +36,9 @@ impl Device {
             p_next: ptr::null(),
             flags: vk::SemaphoreCreateFlags::empty(),
         };
-        unsafe { self.device.create_semaphore(&create_info, None).unwrap() }
+        let semaphore = unsafe { self.device.create_semaphore(&create_info, None).unwrap() };
+        println!("{:?}", (semaphore));
+        semaphore
     }
 
     pub fn destroy(self) {
@@ -90,13 +92,13 @@ impl Engine {
             p_enabled_features: &features,
         };
 
-        let device: ash::Device<V1_1> = unsafe {
+        let device: ash::Device = unsafe {
             self.instance
                 .create_device(adapter.physical_device, &create_info, None)
                 .unwrap()
         };
 
-        let swapchain = ash::extensions::Swapchain::new(&self.instance, &device).unwrap();
+        let swapchain = ash::extensions::Swapchain::new(&self.instance, &device);
 
         Device { device, swapchain }
     }

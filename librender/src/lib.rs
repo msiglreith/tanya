@@ -1,5 +1,3 @@
-#![feature(const_slice_as_ptr)]
-
 extern crate ash;
 
 pub mod display;
