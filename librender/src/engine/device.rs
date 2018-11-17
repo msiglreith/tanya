@@ -37,8 +37,23 @@ impl Device {
             flags: vk::SemaphoreCreateFlags::empty(),
         };
         let semaphore = unsafe { self.device.create_semaphore(&create_info, None).unwrap() };
-        println!("{:?}", (semaphore));
         semaphore
+    }
+
+    pub fn create_command_pool(&self, family: usize) -> vk::CommandPool {
+        let create_info = vk::CommandPoolCreateInfo {
+            queue_family_index: family as _,
+            ..Default::default()
+        };
+        unsafe { self.device.create_command_pool(&create_info, None).unwrap() }
+    }
+
+    pub fn reset_command_pool(&self, pool: vk::CommandPool) {
+        unsafe {
+            self.device
+                .reset_command_pool(pool, vk::CommandPoolResetFlags::empty())
+                .unwrap();
+        }
     }
 
     pub fn destroy(self) {
@@ -50,6 +65,12 @@ impl Device {
     pub fn destroy_fence(&self, fence: vk::Fence) {
         unsafe {
             self.device.destroy_fence(fence, None);
+        }
+    }
+
+    pub fn destroy_semaphore(&self, semaphore: vk::Semaphore) {
+        unsafe {
+            self.device.destroy_semaphore(semaphore, None);
         }
     }
 }

@@ -15,7 +15,6 @@ pub struct Swapchain {
 
 impl Swapchain {
     pub fn begin_frame(&self, semaphore: vk::Semaphore) -> Frame {
-        println!("{:?}", (self.swapchain, semaphore));
         let index = unsafe {
             self.swapchain_fn.acquire_next_image_khr(
                 self.swapchain,
@@ -26,6 +25,10 @@ impl Swapchain {
         };
 
         index.map(|(i, _)| i as Frame).unwrap()
+    }
+
+    pub fn get_image(&self, frame: &Frame) -> vk::Image {
+        self.images[*frame]
     }
 
     pub fn end_frame(&self, frame: Frame, queue: vk::Queue, wait_semaphores: &[vk::Semaphore]) {
@@ -95,9 +98,6 @@ impl Engine {
         };
 
         let swapchain_fn = extensions::Swapchain::new(&self.instance, &device.device);
-
-        println!("{:?}", (swapchain));
-
         let images = unsafe { swapchain_fn.get_swapchain_images_khr(swapchain).unwrap() };
 
         Swapchain {

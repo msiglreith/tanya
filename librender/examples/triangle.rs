@@ -52,8 +52,10 @@ fn main() -> Result<(), Error> {
     let fences: [vk::Fence; NUM_FRAMES] = [device.create_fence(false), device.create_fence(false)];
     let frame_ready: [vk::Semaphore; NUM_FRAMES] =
         [device.create_semaphore(), device.create_semaphore()];
-
-    println!("{:?}", (&fences, &frame_ready));
+    let main_cmd_pools: [vk::CommandPool; NUM_FRAMES] = [
+        device.create_command_pool(main_queue_family),
+        device.create_command_pool(main_queue_family),
+    ];
 
     let mut quit = false;
     let mut tick = 0;
@@ -67,12 +69,17 @@ fn main() -> Result<(), Error> {
             _ => {}
         });
 
-        let frame_img_ready = frame_ready[tick % NUM_FRAMES];
-        let frame = swapchain.begin_frame(frame_img_ready);
-
         if quit {
             break;
         }
+
+        let cur_tick = tick % NUM_FRAMES;
+
+        let frame_img_ready = frame_ready[cur_tick];
+        let frame = swapchain.begin_frame(frame_img_ready);
+
+        let main_pool = main_cmd_pools[cur_tick];
+        device.reset_command_pool(main_pool);
 
         swapchain.end_frame(frame, main_queue, &[frame_img_ready]);
 
