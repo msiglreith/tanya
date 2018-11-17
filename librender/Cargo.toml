@@ -13,6 +13,7 @@ ash = "0.26"
 lazy_static = "1.1"
 winit = "0.17"
 winapi = "0.3"
+vk-sync = "0.1.2"
 
 [dev-dependencies]
 failure = "0.1.2"
