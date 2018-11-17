@@ -1,6 +1,7 @@
 use super::{Adapter, Engine};
 use ash::version::{DeviceV1_0, InstanceV1_0};
 use ash::vk;
+use std::ops::Deref;
 use std::ptr;
 
 const EXTENSION: &[*const i8] = &[b"VK_KHR_swapchain\0".as_ptr() as *const _];
@@ -8,6 +9,13 @@ const EXTENSION: &[*const i8] = &[b"VK_KHR_swapchain\0".as_ptr() as *const _];
 pub struct Device {
     pub(crate) device: ash::Device,
     pub(crate) swapchain: ash::extensions::Swapchain,
+}
+
+impl Deref for Device {
+    type Target = ash::Device;
+    fn deref(&self) -> &Self::Target {
+        &self.device
+    }
 }
 
 impl Device {
@@ -46,6 +54,20 @@ impl Device {
             ..Default::default()
         };
         unsafe { self.device.create_command_pool(&create_info, None).unwrap() }
+    }
+
+    pub fn allocate_command_buffers(
+        &self,
+        pool: vk::CommandPool,
+        count: usize,
+    ) -> Vec<vk::CommandBuffer> {
+        let alloc_info = vk::CommandBufferAllocateInfo {
+            command_pool: pool,
+            level: vk::CommandBufferLevel::PRIMARY,
+            command_buffer_count: count as _,
+            ..Default::default()
+        };
+        unsafe { self.device.allocate_command_buffers(&alloc_info).unwrap() }
     }
 
     pub fn reset_command_pool(&self, pool: vk::CommandPool) {
